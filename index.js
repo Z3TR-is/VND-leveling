@@ -35,16 +35,24 @@ if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 if (!fs.existsSync(LEVELS_FILE)) fs.writeFileSync(LEVELS_FILE, JSON.stringify({}, null, 2));
 
 function loadLevels() {
-  try { return JSON.parse(fs.readFileSync(LEVELS_FILE, "utf8")); } 
-  catch { return {}; }
+  try { 
+    return JSON.parse(fs.readFileSync(LEVELS_FILE, "utf8")); 
+  } catch { 
+    return {}; 
+  }
 }
 
 function saveLevels(data) {
-  try { fs.writeFileSync(LEVELS_FILE, JSON.stringify(data, null, 2)); } 
-  catch (err) { console.error(err); }
+  try { 
+    fs.writeFileSync(LEVELS_FILE, JSON.stringify(data, null, 2)); 
+  } catch (err) { 
+    console.error(err); 
+  }
 }
 
-function getXPNeeded(level) { return level * 100; }
+function getXPNeeded(level) { 
+  return level * 100; 
+}
 
 // =====================
 // ROLE REWARDS
@@ -64,15 +72,19 @@ const roleRewards = {
 const LEVEL_UP_CHANNEL_ID = '1408661076350079056';
 
 // =====================
-// REGISTER SLASH COMMANDS (simplified)
+// REGISTER SLASH COMMANDS
 // =====================
 client.once(Events.ClientReady, async () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
 
   const commands = [
     new SlashCommandBuilder()
-      .setName("leaderboard")
-      .setDescription("عرض اللوحة تاع المتصدرين")
+      .setName("ping")
+      .setDescription("Check bot response time"),
+
+    new SlashCommandBuilder()
+      .setName("xp_leaderboard")
+      .setDescription("Show the XP leaderboard")
   ].map(cmd => cmd.toJSON());
 
   try {
@@ -98,27 +110,48 @@ client.on(Events.InteractionCreate, async interaction => {
   const userId = interaction.user.id;
 
   if (!levels[guildId]) levels[guildId] = {};
-  if (!levels[guildId][userId]) levels[guildId][userId] = { xp: 0, level: 1 };
+  if (!levels[guildId][userId]) {
+    levels[guildId][userId] = { xp: 0, level: 1 };
+    saveLevels(levels);
+  }
 
-  if (interaction.commandName === "leaderboard") {
-    const guildUsers = levels[guildId];
-    const sorted = Object.entries(guildUsers)
-      .sort((a, b) => b[1].xp - a[1].xp)
+  if (interaction.commandName === "ping") {
+    return interaction.reply("🏓 Pong!");
+  }
+
+  if (interaction.commandName === "xp_leaderboard") {
+    const guildUsers = Object.entries(levels[guildId]).filter(
+      ([key, value]) =>
+        typeof value === "object" &&
+        value !== null &&
+        "xp" in value &&
+        "level" in value
+    );
+
+    const sorted = guildUsers
+      .sort((a, b) => {
+        if (b[1].level !== a[1].level) return b[1].level - a[1].level;
+        return b[1].xp - a[1].xp;
+      })
       .slice(0, 10);
 
-    if (!sorted.length) return interaction.reply("لا توجد بيانات بعد في الـ leaderboard.");
+    if (!sorted.length) {
+      return interaction.reply("لا توجد بيانات بعد في لوحة المتصدرين.");
+    }
 
-    let text = "🏆 **لوحة المتصدرين**\n\n";
+    let text = "🏆 **لوحة متصدري الخبرة**\n\n";
+
     for (let i = 0; i < sorted.length; i++) {
       const [id, data] = sorted[i];
-      text += `**${i + 1}.** <@${id}> — المستوى **${data.level}** (**${data.xp} XP**)\n`;
+      text += `**${i + 1}.** <@${id}> — المستوى **${data.level}** | **${data.xp} XP**\n`;
     }
+
     return interaction.reply(text);
   }
 });
 
 // =====================
-// LEVELING SYSTEM (no cooldown)
+// LEVELING SYSTEM
 // =====================
 client.on(Events.MessageCreate, async message => {
   if (message.author.bot || !message.guild) return;
@@ -128,7 +161,11 @@ client.on(Events.MessageCreate, async message => {
   const levels = loadLevels();
 
   if (!levels[guildId]) levels[guildId] = {};
-  if (!levels[guildId][userId]) levels[guildId][userId] = { xp: 0, level: 1 };
+  if (!levels[guildId][userId]) {
+    levels[guildId][userId] = { xp: 0, level: 1 };
+  }
+
+  const oldLevel = levels[guildId][userId].level;
 
   const xpGain = Math.floor(Math.random() * 16) + 15;
   levels[guildId][userId].xp += xpGain;
@@ -144,43 +181,44 @@ client.on(Events.MessageCreate, async message => {
 
   saveLevels(levels);
 
-if (leveledUp) {
+  if (leveledUp) {
     const channel = message.guild.channels.cache.get(LEVEL_UP_CHANNEL_ID) || message.channel;
 
-    let previousLevel = userData.level - 1;
-    let messageText = `تهانينا 🥳 ${message.author}\nتمت ترقيتك من مستوى **${previousLevel}** إلى مستوى **${userData.level}**`;
+    let messageText = `تهانينا 🥳 ${message.author}\nتمت ترقيتك من مستوى **${oldLevel}** إلى مستوى **${userData.level}**`;
 
     if (roleRewards[userData.level]) {
-        const newRole = message.guild.roles.cache.get(roleRewards[userData.level]);
-        if (newRole && !message.member.roles.cache.has(newRole.id)) {
-            try {
-                // إيجاد آخر رول من نفس الـ rewards إذا كان موجود
-                let previousRoleName = null;
-                for (let lvl = userData.level - 1; lvl > 0; lvl--) {
-                    if (roleRewards[lvl]) {
-                        const role = message.guild.roles.cache.get(roleRewards[lvl]);
-                        if (role && message.member.roles.cache.has(role.id)) {
-                            previousRoleName = role.name;
-                            await message.member.roles.remove(role);
-                            break;
-                        }
-                    }
-                }
+      const newRole = message.guild.roles.cache.get(roleRewards[userData.level]);
 
-                await message.member.roles.add(newRole);
+      if (newRole && !message.member.roles.cache.has(newRole.id)) {
+        try {
+          let previousRoleName = null;
 
-                if (previousRoleName) {
-                    messageText += `\nوسميت ترقيتك من رول **${previousRoleName}** إلى رول **${newRole.name}**`;
-                } else {
-                    messageText += `\nوحصلت على رول جديد: **${newRole.name}**`;
-                }
+          for (let lvl = userData.level - 1; lvl > 0; lvl--) {
+            if (roleRewards[lvl]) {
+              const oldRole = message.guild.roles.cache.get(roleRewards[lvl]);
+              if (oldRole && message.member.roles.cache.has(oldRole.id)) {
+                previousRoleName = oldRole.name;
+                await message.member.roles.remove(oldRole);
+                break;
+              }
+            }
+          }
 
-            } catch (err) { console.error(err); }
+          await message.member.roles.add(newRole);
+
+          if (previousRoleName) {
+            messageText += `\nوتمت ترقيتك من رول **${previousRoleName}** إلى رول **${newRole.name}**`;
+          } else {
+            messageText += `\nلقد تقدمت وحصلت على رول **${newRole.name}**`;
+          }
+        } catch (err) {
+          console.error(err);
         }
+      }
     }
 
     channel.send(messageText);
-}
+  }
 });
 
 client.login(process.env.BOT_TOKEN);
