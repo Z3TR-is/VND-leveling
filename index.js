@@ -144,22 +144,43 @@ client.on(Events.MessageCreate, async message => {
 
   saveLevels(levels);
 
-  if (leveledUp) {
+if (leveledUp) {
     const channel = message.guild.channels.cache.get(LEVEL_UP_CHANNEL_ID) || message.channel;
-    let messageText = `${message.author} لقد تقدمت إلى المستوى **${userData.level}**!`;
+
+    let previousLevel = userData.level - 1;
+    let messageText = `تهانينا 🥳 ${message.author}\nتمت ترقيتك من مستوى **${previousLevel}** إلى مستوى **${userData.level}**`;
 
     if (roleRewards[userData.level]) {
-      const role = message.guild.roles.cache.get(roleRewards[userData.level]);
-      if (role && !message.member.roles.cache.has(role.id)) {
-        try {
-          await message.member.roles.add(role);
-          messageText += ` لقد حصلت على رول: **${role.name}**`;
-        } catch (err) { console.error(err); }
-      }
+        const newRole = message.guild.roles.cache.get(roleRewards[userData.level]);
+        if (newRole && !message.member.roles.cache.has(newRole.id)) {
+            try {
+                // إيجاد آخر رول من نفس الـ rewards إذا كان موجود
+                let previousRoleName = null;
+                for (let lvl = userData.level - 1; lvl > 0; lvl--) {
+                    if (roleRewards[lvl]) {
+                        const role = message.guild.roles.cache.get(roleRewards[lvl]);
+                        if (role && message.member.roles.cache.has(role.id)) {
+                            previousRoleName = role.name;
+                            await message.member.roles.remove(role);
+                            break;
+                        }
+                    }
+                }
+
+                await message.member.roles.add(newRole);
+
+                if (previousRoleName) {
+                    messageText += `\nوسميت ترقيتك من رول **${previousRoleName}** إلى رول **${newRole.name}**`;
+                } else {
+                    messageText += `\nوحصلت على رول جديد: **${newRole.name}**`;
+                }
+
+            } catch (err) { console.error(err); }
+        }
     }
 
     channel.send(messageText);
-  }
+}
 });
 
 client.login(process.env.BOT_TOKEN);
