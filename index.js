@@ -64,7 +64,7 @@ const roleRewards = {
 const LEVEL_UP_CHANNEL_ID = '1408661076350079056';
 
 // =====================
-// REGISTER SLASH COMMANDS
+// REGISTER SLASH COMMANDS (simplified)
 // =====================
 client.once(Events.ClientReady, async () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
@@ -118,10 +118,8 @@ client.on(Events.InteractionCreate, async interaction => {
 });
 
 // =====================
-// LEVELING SYSTEM
+// LEVELING SYSTEM (no cooldown)
 // =====================
-const cooldown = new Set();
-
 client.on(Events.MessageCreate, async message => {
   if (message.author.bot || !message.guild) return;
 
@@ -131,11 +129,6 @@ client.on(Events.MessageCreate, async message => {
 
   if (!levels[guildId]) levels[guildId] = {};
   if (!levels[guildId][userId]) levels[guildId][userId] = { xp: 0, level: 1 };
-
-  const key = `${guildId}-${userId}`;
-  if (cooldown.has(key)) return;
-  cooldown.add(key);
-  setTimeout(() => cooldown.delete(key), 60000);
 
   const xpGain = Math.floor(Math.random() * 16) + 15;
   levels[guildId][userId].xp += xpGain;
