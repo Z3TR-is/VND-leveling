@@ -70,6 +70,9 @@ const roleRewards = {
 // LEVEL-UP CHANNEL
 // =====================
 const LEVEL_UP_CHANNEL_ID = '1408661076350079056';
+client.once(Events.ClientReady, () => {
+  console.log(`✅ Logged in as ${client.user.tag}`);
+});
 
 // =====================
 // INTERACTION HANDLER
