@@ -72,34 +72,6 @@ const roleRewards = {
 const LEVEL_UP_CHANNEL_ID = '1408661076350079056';
 
 // =====================
-// REGISTER SLASH COMMANDS
-// =====================
-client.once(Events.ClientReady, async () => {
-  console.log(`✅ Logged in as ${client.user.tag}`);
-
-  const commands = [
-    new SlashCommandBuilder()
-      .setName("ping")
-      .setDescription("Check bot response time"),
-
-    new SlashCommandBuilder()
-      .setName("xp_leaderboard")
-      .setDescription("Show the XP leaderboard")
-  ].map(cmd => cmd.toJSON());
-
-  try {
-    const rest = new REST({ version: "10" }).setToken(config.token);
-    await rest.put(
-      Routes.applicationGuildCommands(config.clientId, config.guildId),
-      { body: commands }
-    );
-    console.log("✅ Slash commands registered.");
-  } catch (err) {
-    console.error("❌ Error registering slash commands:", err);
-  }
-});
-
-// =====================
 // INTERACTION HANDLER
 // =====================
 client.on(Events.InteractionCreate, async interaction => {
