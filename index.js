@@ -5,7 +5,8 @@ const {
   Events, 
   REST, 
   Routes, 
-  SlashCommandBuilder 
+  SlashCommandBuilder,
+  EmbedBuilder
 } = require("discord.js");
 
 const fs = require("fs");
@@ -70,6 +71,10 @@ const roleRewards = {
 // LEVEL-UP CHANNEL
 // =====================
 const LEVEL_UP_CHANNEL_ID = '1408661076350079056';
+
+// =====================
+// BOT READY
+// =====================
 client.once(Events.ClientReady, () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
 });
@@ -114,14 +119,22 @@ client.on(Events.InteractionCreate, async interaction => {
       return interaction.reply("لا توجد بيانات بعد في لوحة المتصدرين.");
     }
 
-    let text = "🏆 **لوحة متصدري الخبرة**\n\n";
+    let description = "";
 
     for (let i = 0; i < sorted.length; i++) {
       const [id, data] = sorted[i];
-      text += `**${i + 1}.** <@${id}> — المستوى **${data.level}** | **${data.xp} XP**\n`;
+      const member = await interaction.guild.members.fetch(id).catch(() => null);
+      const username = member ? member.user.username : `Unknown User (${id})`;
+      description += `**${i + 1}.** ${username} — المستوى **${data.level}** | **${data.xp} XP**\n`;
     }
 
-    return interaction.reply(text);
+    const embed = new EmbedBuilder()
+      .setTitle("🏆 لوحة متصدري الخبرة")
+      .setDescription(description)
+      .setFooter({ text: `Requested by ${interaction.user.username}` })
+      .setTimestamp();
+
+    return interaction.reply({ embeds: [embed] });
   }
 });
 
@@ -173,7 +186,6 @@ client.on(Events.MessageCreate, async message => {
               const oldRole = message.guild.roles.cache.get(roleRewards[lvl]);
               if (oldRole && message.member.roles.cache.has(oldRole.id)) {
                 previousRoleName = oldRole.name;
-                await message.member.roles.remove(oldRole);
                 break;
               }
             }
