@@ -61,18 +61,27 @@ const roleRewards = {
 // =====================
 // LEVEL-UP CHANNEL
 // =====================
-const LEVEL_UP_CHANNEL_ID = 'PUT_YOUR_CHANNEL_ID_HERE';
+const LEVEL_UP_CHANNEL_ID = '1408661076350079056';
 
 // =====================
 // REGISTER SLASH COMMANDS
 // =====================
+const { Client, GatewayIntentBits, Events, REST, Routes, SlashCommandBuilder } = require("discord.js");
+const config = require("./config.json");
+
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
+
 client.once(Events.ClientReady, async () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
 
   const commands = [
     new SlashCommandBuilder()
-      .setName("leaderboard")
-      .setDescription("عرض لوحة المتصدرين")
+      .setName("ping")
+      .setDescription("Check bot response time"),
+
+    new SlashCommandBuilder()
+      .setName("xp_leaderboard")
+      .setDescription("Show the XP leaderboard")
   ].map(cmd => cmd.toJSON());
 
   try {
@@ -86,6 +95,18 @@ client.once(Events.ClientReady, async () => {
     console.error("❌ Error registering slash commands:", err);
   }
 });
+
+client.on(Events.InteractionCreate, async interaction => {
+  if (!interaction.isChatInputCommand()) return;
+
+  if (interaction.commandName === "ping") {
+    await interaction.reply(`Pong! 🏓 Latency: ${client.ws.ping}ms`);
+  } else if (interaction.commandName === "xp_leaderboard") {
+    await interaction.reply("🏆 XP Leaderboard feature coming soon!");
+  }
+});
+
+client.login(process.env.BOT_TOKEN);
 
 // =====================
 // INTERACTION HANDLER
